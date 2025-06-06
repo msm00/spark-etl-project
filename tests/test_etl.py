@@ -1,9 +1,10 @@
 import os
 import unittest
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
 import tempfile
 import csv
+
+from pyspark_etl_project.etl import transform_df
 
 # Importujeme testovaný kód
 # Pro testy v izolaci bez externích závislostí budeme používat mock data
@@ -43,19 +44,9 @@ class TestETLProcess(unittest.TestCase):
         
     def test_username_transformation(self):
         """Test transformace dat - vytvoření username."""
-        from pyspark.sql.functions import lower, concat_ws, regexp_replace
-        
-        # Načtení dat
         df = self.spark.read.csv(self.temp_csv, header=True, inferSchema=True)
-        
-        # Aplikace transformace
-        transformed_df = df.select(
-            "first_name",
-            "last_name",
-            "email",
-            lower(regexp_replace(concat_ws("_", col("first_name"), col("last_name")), "\\s+", "_")).alias("username")
-        )
-        
+        transformed_df = transform_df(df)
+
         # Ověření vytvoření username
         result = transformed_df.collect()
         self.assertEqual(result[0]["username"], "jan_novák")
@@ -63,20 +54,8 @@ class TestETLProcess(unittest.TestCase):
         
     def test_data_schema(self):
         """Test schématu dat po transformaci."""
-        from pyspark.sql.functions import lower, concat_ws, regexp_replace, current_timestamp
-        
-        # Načtení dat
         df = self.spark.read.csv(self.temp_csv, header=True, inferSchema=True)
-        
-        # Aplikace transformace
-        transformed_df = df.select(
-            "first_name",
-            "last_name",
-            "email",
-            lower(regexp_replace(concat_ws("_", col("first_name"), col("last_name")), "\\s+", "_")).alias("username"),
-            current_timestamp().alias("created_at"),
-            current_timestamp().alias("updated_at")
-        )
+        transformed_df = transform_df(df)
         
         # Ověření schématu
         schema = transformed_df.schema
